@@ -3,6 +3,7 @@ from flask import Flask, request, jsonify
 from flask_marshmallow import Marshmallow
 
 from flask_sqlalchemy import SQLAlchemy
+#from sqlalchemy import ForeignKey
 import json
 
 app = Flask(__name__)
@@ -19,30 +20,43 @@ db = SQLAlchemy(app)
 # init Marshmallow
 ma = Marshmallow(app)
 
+class IncidentModel(db.Model):
+    __tablename__ = 'incidents'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100))
+    description = db.Column(db.String(100))
+    value = db.Column(db.Integer)
+
+    def __repr__(self):
+        return f'Incident(title={self.title}, value={self.value})'
+
+class IncidentSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = IncidentModel
 
 class OngModel(db.Model):
+    __tablename__ = 'ongs'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
     email = db.Column(db.String(100))
     whatsapp = db.Column(db.String(100))
     location = db.Column(db.String(100))
+    incident_id = db.Column(db.Integer, db.ForeignKey('incidents.id'))
+    incidents = db.relationship("IncidentModel", backref=db.backref('incidents'))
 
-    def __init__(self, name, email, whatsapp, location):
-        self.name = name
-        self.email = email
-        self.whatsapp = whatsapp
-        self.location = location
-
+    def __repr__(self):
+        return f'Ong(name={self.name}, email={self.email})'
 
 class OngSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = OngModel
 
-
 # init Schema
 
 ong_schema = OngSchema()
 ongs_schema = OngSchema(many=True)
+incident_schema = IncidentSchema()
+incidents_schema = IncidentSchema(many=True)
 
 
 @app.route('/hellojson')
