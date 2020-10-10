@@ -3,9 +3,9 @@ from flask import Flask, request, jsonify
 from flask_marshmallow import Marshmallow
 
 from flask_sqlalchemy import SQLAlchemy
-#from sqlalchemy import ForeignKey
 import json
 
+##FEITO UTILIZANDO FLASK_SQLALCHEMY
 app = Flask(__name__)
 
 # database
@@ -20,19 +20,7 @@ db = SQLAlchemy(app)
 # init Marshmallow
 ma = Marshmallow(app)
 
-class IncidentModel(db.Model):
-    __tablename__ = 'incidents'
-    id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100))
-    description = db.Column(db.String(100))
-    value = db.Column(db.Integer)
 
-    def __repr__(self):
-        return f'Incident(title={self.title}, value={self.value})'
-
-class IncidentSchema(ma.SQLAlchemyAutoSchema):
-    class Meta:
-        model = IncidentModel
 
 class OngModel(db.Model):
     __tablename__ = 'ongs'
@@ -41,18 +29,31 @@ class OngModel(db.Model):
     email = db.Column(db.String(100))
     whatsapp = db.Column(db.String(100))
     location = db.Column(db.String(100))
-    incident_id = db.Column(db.Integer, db.ForeignKey('incidents.id'))
-    incidents = db.relationship("IncidentModel", backref=db.backref('incidents'))
+    incident_id = db.Column(db.Integer, db.ForeignKey('incidents.id'),nullable=False)
 
     def __repr__(self):
-        return f'Ong(name={self.name}, email={self.email})'
+        return f'Ong(id={self.id}, name={self.name}, email={self.email}, incident_id={self.incident_id})'
 
 class OngSchema(ma.SQLAlchemyAutoSchema):
     class Meta:
         model = OngModel
 
-# init Schema
+class IncidentModel(db.Model):
+    __tablename__ = 'incidents'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(100))
+    description = db.Column(db.String(100))
+    value = db.Column(db.Integer)
+    ong = db.relationship('OngModel', backref='incidents', uselist=False)
 
+    def __repr__(self):
+        return f'Incident(title={self.title}, value={self.value})'
+
+class IncidentSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = IncidentModel
+
+# init Schema
 ong_schema = OngSchema()
 ongs_schema = OngSchema(many=True)
 incident_schema = IncidentSchema()
@@ -91,9 +92,13 @@ def save_ong():
 
     ong = OngModel(name=name, email=email, whatsapp=whatsapp, location=location)
 
+    incidentDefault = IncidentModel(title='teste', description='descricaao', value='20', ong=ong)
+
     db.session.add(ong)
+    db.session.add(incidentDefault)
     db.session.commit()
     print('ONG saved successfully!')
+    print(ong)
     return ong_schema.jsonify(ong), 201
     
 
